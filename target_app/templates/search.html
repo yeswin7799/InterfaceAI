@@ -1,0 +1,33 @@
+<!--
+  Member Search — intentionally "legacy": table-based layout, inline styles,
+  no id/class/data-testid attributes anywhere. The only reliable way to find
+  the input box is by its visible label text and its position in the table,
+  same as a human operator (or a computer-use agent) would have to.
+-->
+<html>
+<head><title>Member Servicing - Search</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0" width="500">
+  <tr>
+    <td colspan="2" bgcolor="#003366"><font color="white"><b>Member Servicing Console</b></font></td>
+  </tr>
+  <tr>
+    <td colspan="2">Search for a member by their Member ID.</td>
+  </tr>
+  {% if error %}
+  <tr>
+    <td colspan="2"><font color="red"><b>{{ error }}</b></font></td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td width="150">Member ID:</td>
+    <td>
+      <form method="POST" action="/search">
+        <input type="text" name="member_id" value="{{ submitted_id or '' }}">
+        <input type="submit" value="Search">
+      </form>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

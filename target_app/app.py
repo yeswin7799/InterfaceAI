@@ -12,7 +12,7 @@ resets every time the process restarts  that's intentional: this app is a
 throwaway target, not a product.
 """
 
-from flask import Flask
+from flask import Flask, render_template, request, redirect
 
 app = Flask(__name__)
 app.secret_key = "dev-only-secret-not-for-production"  # fine for a local mock; a real app would load this from env/secret store
@@ -43,6 +43,33 @@ MEMBERS = {
 # Sub-accounts opened during a session live here too  in-memory, reset on restart.
 SUB_ACCOUNTS = {}
 
+@app.route("/search", methods=["GET"])
+def search_form():
+    """The search screen. GET just shows the empty form."""
+    return render_template("search.html")
+
+
+@app.route("/search", methods=["POST"])
+def search_submit():
+    """
+    Handle the search form submission.
+
+    On a valid, known member ID -> redirect to their detail page (built next step).
+    On an unknown ID -> re-render the search form with an inline error. This is
+    a *business outcome* ("no such member"), not a crash — an important
+    distinction the replay engine will need to make later (see REPORT.md,
+    Determinism & error handling).
+    """
+    member_id = request.form.get("member_id", "").strip()
+
+    if member_id in MEMBERS:
+        return redirect(f"/member/{member_id}")
+
+    return render_template(
+        "search.html",
+        error=f"No member found with ID '{member_id}'.",
+        submitted_id=member_id,
+    )
 
 @app.route("/health")
 def health():
