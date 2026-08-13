@@ -1,0 +1,35 @@
+<!--
+  Confirmation — the checkpoint page. Its presence (specifically the phrase
+  "Sub-Account Opened Successfully" plus the sub-account ID) is what both the
+  discovery agent and the deterministic replay engine will check for to
+  confirm the goal was actually reached, not just that a form was submitted.
+-->
+<html>
+<head><title>Member Servicing - Confirmation</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0" width="500">
+  <tr>
+    <td colspan="2" bgcolor="#006622"><font color="white"><b>Sub-Account Opened Successfully</b></font></td>
+  </tr>
+  <tr>
+    <td width="150">Sub-Account ID:</td>
+    <td>{{ sub_account.sub_account_id }}</td>
+  </tr>
+  <tr>
+    <td>Member ID:</td>
+    <td>{{ sub_account.member_id }}</td>
+  </tr>
+  <tr>
+    <td>Account Type:</td>
+    <td>{{ sub_account.account_type }}</td>
+  </tr>
+  <tr>
+    <td>Initial Deposit:</td>
+    <td>${{ "%.2f"|format(sub_account.initial_deposit) }}</td>
+  </tr>
+  <tr>
+    <td colspan="2"><a href="/member/{{ sub_account.member_id }}">Back to Member Detail</a></td>
+  </tr>
+</table>
+</body>
+</html>

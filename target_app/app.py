@@ -12,6 +12,8 @@ resets every time the process restarts  that's intentional: this app is a
 throwaway target, not a product.
 """
 
+import uuid
+
 from flask import Flask, render_template, request, redirect
 
 app = Flask(__name__)
@@ -93,6 +95,87 @@ def member_detail(member_id):
         return render_template("member_detail.html", denied=True, member=member)
 
     return render_template("member_detail.html", denied=False, member=member)
+
+def _get_accessible_member(member_id):
+    """
+    Shared guard used by both the form and submit routes: resolves a member
+    for this flow, or returns None if it's not accessible (unknown or
+    restricted). Defense-in-depth — the detail page already hides the link
+    for restricted/unknown members, but a direct URL shouldn't bypass that.
+    """
+    member = MEMBERS.get(member_id)
+    if member is None or member["status"] == "restricted":
+        return None
+    return member
+
+
+@app.route("/member/<member_id>/open-sub-account", methods=["GET"])
+def open_sub_account_form(member_id):
+    member = _get_accessible_member(member_id)
+    if member is None:
+        return redirect("/search")
+    return render_template("open_sub_account.html", member=member)
+
+
+@app.route("/member/<member_id>/open-sub-account", methods=["POST"])
+def open_sub_account_submit(member_id):
+    """
+    Validate and process the sub-account form.
+
+    Validation error (bad deposit amount) -> re-render the form with an
+    inline error and the submitted values preserved. This is a *business
+    outcome* (validation error), one of the three categories the replay
+    engine must distinguish per REPORT.md.
+
+    On success -> create the sub-account and redirect to the confirmation
+    checkpoint page.
+    """
+    member = _get_accessible_member(member_id)
+    if member is None:
+        return redirect("/search")
+
+    account_type = request.form.get("account_type", "")
+    initial_deposit_raw = request.form.get("initial_deposit", "").strip()
+
+    error = None
+    initial_deposit = None
+
+    if account_type not in ("savings", "checking", "certificate"):
+        error = "Please select a valid account type."
+    else:
+        try:
+            initial_deposit = float(initial_deposit_raw)
+            if initial_deposit < 25:
+                error = "Initial deposit must be at least $25.00."
+        except ValueError:
+            error = f"'{initial_deposit_raw}' is not a valid dollar amount."
+
+    if error:
+        return render_template(
+            "open_sub_account.html",
+            member=member,
+            error=error,
+            account_type=account_type,
+            initial_deposit=initial_deposit_raw,
+        )
+
+    sub_account_id = f"SA-{uuid.uuid4().hex[:8].upper()}"
+    SUB_ACCOUNTS[sub_account_id] = {
+        "sub_account_id": sub_account_id,
+        "member_id": member_id,
+        "account_type": account_type,
+        "initial_deposit": initial_deposit,
+    }
+
+    return redirect(f"/sub-account/{sub_account_id}/confirmation")
+
+
+@app.route("/sub-account/<sub_account_id>/confirmation", methods=["GET"])
+def sub_account_confirmation(sub_account_id):
+    sub_account = SUB_ACCOUNTS.get(sub_account_id)
+    if sub_account is None:
+        return redirect("/search")
+    return render_template("confirmation.html", sub_account=sub_account)
 
 @app.route("/health")
 def health():

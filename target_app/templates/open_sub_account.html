@@ -1,0 +1,52 @@
+<!--
+  Open Sub-Account — multi-field form + validation. Same legacy conventions:
+  no id/class/data-testid, table layout. account_type is a <select>, which
+  is a slightly different control type than the text inputs we've used so
+  far — worth exercising since a real agent needs to handle both.
+-->
+<html>
+<head><title>Member Servicing - Open Sub-Account</title></head>
+<body>
+<table border="1" cellpadding="6" cellspacing="0" width="500">
+  <tr>
+    <td colspan="2" bgcolor="#003366"><font color="white"><b>Member Servicing Console</b></font></td>
+  </tr>
+  <tr>
+    <td colspan="2">Open a new sub-account for member {{ member.member_id }} ({{ member.name }}).</td>
+  </tr>
+  {% if error %}
+  <tr>
+    <td colspan="2"><font color="red"><b>{{ error }}</b></font></td>
+  </tr>
+  {% endif %}
+  <tr>
+    <td colspan="2">
+      <form method="POST" action="/member/{{ member.member_id }}/open-sub-account">
+        <table cellpadding="4">
+          <tr>
+            <td width="150">Account Type:</td>
+            <td>
+              <select name="account_type">
+                <option value="savings" {% if account_type == 'savings' %}selected{% endif %}>Savings</option>
+                <option value="checking" {% if account_type == 'checking' %}selected{% endif %}>Checking</option>
+                <option value="certificate" {% if account_type == 'certificate' %}selected{% endif %}>Certificate</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td>Initial Deposit ($):</td>
+            <td><input type="text" name="initial_deposit" value="{{ initial_deposit or '' }}"></td>
+          </tr>
+          <tr>
+            <td colspan="2"><input type="submit" value="Open Sub-Account"></td>
+          </tr>
+        </table>
+      </form>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="2"><a href="/member/{{ member.member_id }}">Back to Member Detail</a></td>
+  </tr>
+</table>
+</body>
+</html>
