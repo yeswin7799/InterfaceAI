@@ -24,18 +24,20 @@
       <form method="POST" action="/member/{{ member.member_id }}/open-sub-account">
         <table cellpadding="4">
           <tr>
-            <td width="150">Account Type:</td>
-            <td>
-              <select name="account_type">
-                <option value="savings" {% if account_type == 'savings' %}selected{% endif %}>Savings</option>
-                <option value="checking" {% if account_type == 'checking' %}selected{% endif %}>Checking</option>
-                <option value="certificate" {% if account_type == 'certificate' %}selected{% endif %}>Certificate</option>
-              </select>
+            <td colspan="2">
+              <label>Account Type:
+                <select name="account_type">
+                  <option value="savings" {% if account_type == 'savings' %}selected{% endif %}>Savings</option>
+                  <option value="checking" {% if account_type == 'checking' %}selected{% endif %}>Checking</option>
+                  <option value="certificate" {% if account_type == 'certificate' %}selected{% endif %}>Certificate</option>
+                </select>
+              </label>
             </td>
           </tr>
           <tr>
-            <td>Initial Deposit ($):</td>
-            <td><input type="text" name="initial_deposit" value="{{ initial_deposit or '' }}"></td>
+            <td colspan="2">
+              <label>Initial Deposit ($): <input type="text" name="initial_deposit" value="{{ initial_deposit or '' }}"></label>
+            </td>
           </tr>
           <tr>
             <td colspan="2"><input type="submit" value="Open Sub-Account"></td>

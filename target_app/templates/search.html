@@ -19,11 +19,10 @@
     <td colspan="2"><font color="red"><b>{{ error }}</b></font></td>
   </tr>
   {% endif %}
-  <tr>
-    <td width="150">Member ID:</td>
-    <td>
+<tr>
+    <td colspan="2">
       <form method="POST" action="/search">
-        <input type="text" name="member_id" value="{{ submitted_id or '' }}">
+        <label>Member ID: <input type="text" name="member_id" value="{{ submitted_id or '' }}"></label>
         <input type="submit" value="Search">
       </form>
     </td>
