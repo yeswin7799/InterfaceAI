@@ -71,6 +71,29 @@ def search_submit():
         submitted_id=member_id,
     )
 
+@app.route("/member/<member_id>", methods=["GET"])
+def member_detail(member_id):
+    """
+    Show a member's detail page.
+
+    Three outcomes, all *business outcomes* the agent/replay must distinguish
+    from crashes:
+      - unknown member_id -> back to search with an error (shouldn't normally
+        happen via the UI since search already filters this, but guards
+        against a bad/stale link or direct navigation).
+      - status == "restricted" -> permission-denied view, no balance shown.
+      - otherwise -> full detail view with the "open sub-account" action.
+    """
+    member = MEMBERS.get(member_id)
+
+    if member is None:
+        return redirect(f"/search")
+
+    if member["status"] == "restricted":
+        return render_template("member_detail.html", denied=True, member=member)
+
+    return render_template("member_detail.html", denied=False, member=member)
+
 @app.route("/health")
 def health():
     """Plain liveness check  not part of the automated flow, just useful
