@@ -11,7 +11,7 @@ Nothing here talks to a real database. Member data lives in memory and
 resets every time the process restarts  that's intentional: this app is a
 throwaway target, not a product.
 """
-
+import time
 import uuid
 
 from flask import Flask, render_template, request, redirect
@@ -78,14 +78,24 @@ def member_detail(member_id):
     """
     Show a member's detail page.
 
-    Three outcomes, all *business outcomes* the agent/replay must distinguish
+    Three business outcomes, all of which the agent/replay must distinguish
     from crashes:
       - unknown member_id -> back to search with an error (shouldn't normally
         happen via the UI since search already filters this, but guards
         against a bad/stale link or direct navigation).
       - status == "restricted" -> permission-denied view, no balance shown.
       - otherwise -> full detail view with the "open sub-account" action.
+
+    Also supports ?simulate=slow, which adds an artificial delay before
+    responding — a *recoverable condition* (transient slowness), not a
+    business outcome. The page still loads correctly; something waiting on
+    it just needs to be patient rather than giving up. This is here so the
+    replay engine has a real condition to demonstrate wait/retry logic
+    against (see REPORT.md, Determinism & error handling).
     """
+    if request.args.get("simulate") == "slow":
+        time.sleep(4)
+
     member = MEMBERS.get(member_id)
 
     if member is None:
