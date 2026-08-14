@@ -108,6 +108,26 @@ class Checkpoint(BaseModel):
         description="Text that must appear on the final page for the run to be considered successful."
     )
 
+class KnownOutcome(BaseModel):
+    """
+    A named, expected business outcome replay should recognize and report
+    distinctly from a hard failure -- e.g. "member not found" or "validation
+    error". Detected by a distinctive substring of text that appears on the
+    page when this outcome occurs.
+
+    Deliberately authored by whoever records/reviews the artifact, not
+    inferred from the discovery run itself: a *successful* discovery run,
+    by definition, never encountered these outcomes, so they can't be
+    mined from its trace. This mirrors the explicit-parameterization
+    decision for value_param -- see artifacts/record.py.
+    """
+
+    name: str
+    description: str
+    detected_by_text: str = Field(
+        description="A distinctive substring of text that appears on the page when this outcome occurs."
+    )
+
 
 class Capability(BaseModel):
     """
@@ -124,6 +144,10 @@ class Capability(BaseModel):
     steps: list[ArtifactStep]
     outputs: list[ArtifactOutput]
     checkpoint: Checkpoint
+    known_outcomes: list[KnownOutcome] = Field(
+        default_factory=list,
+        description="Named business outcomes replay should recognize and report distinctly from hard failures.",
+    )
 
     locator_strategy_notes: str = Field(
         description="Reasoning about why the chosen locator strategy (role+name) is expected to be robust for this app."

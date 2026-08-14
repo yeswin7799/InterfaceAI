@@ -27,8 +27,8 @@ from artifacts.schema import (
     Capability,
     Checkpoint,
     ElementLocator,
+    KnownOutcome,
 )
-
 
 def load_discovery_log(path: str) -> dict:
     """Load a saved evidence JSON file (see agent/evidence.py) as a plain dict."""
@@ -54,6 +54,7 @@ def record_capability(
     outputs: list[ArtifactOutput],
     checkpoint: Checkpoint,
     locator_strategy_notes: str,
+    known_outcomes: list[KnownOutcome] | None = None,
 ) -> Capability:
     """
     Build a Capability from a loaded discovery log dict.
@@ -113,6 +114,7 @@ def record_capability(
         steps=steps,
         outputs=outputs,
         checkpoint=checkpoint,
+        known_outcomes=known_outcomes or [],
         locator_strategy_notes=locator_strategy_notes,
     )
 
@@ -167,6 +169,31 @@ if __name__ == "__main__":
             description="The confirmation page is shown, containing the success banner text.",
             expected_text_contains="Sub-Account Opened Successfully",
         ),
+        
+        known_outcomes=[
+            KnownOutcome(
+                name="member_not_found",
+                description="No member exists with the given member_id.",
+                detected_by_text="No member found with ID",
+            ),
+            KnownOutcome(
+                name="permission_denied",
+                description="The member's record is restricted; sub-account cannot be opened.",
+                detected_by_text="Access denied: this member's record is restricted",
+            ),
+            KnownOutcome(
+                name="deposit_too_low",
+                description="The initial deposit amount was below the $25 minimum.",
+                detected_by_text="Initial deposit must be at least $25.00.",
+            ),
+            KnownOutcome(
+                name="invalid_deposit_amount",
+                description="The initial deposit amount wasn't a valid number.",
+                detected_by_text="is not a valid dollar amount.",
+            ),
+        ],
+        
+        
         locator_strategy_notes=(
             "All targets use accessibility role + accessible name, sourced from the page's ARIA tree. "
             "The target app has no ids/classes/test-ids (legacy-style markup), so role+name is the only "
