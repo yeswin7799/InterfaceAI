@@ -1,0 +1,101 @@
+{
+  "name": "open_sub_account",
+  "version": "1.0.0",
+  "description": "Search for a member by ID, then open a new sub-account for them and reach the confirmation screen.",
+  "start_url": "http://127.0.0.1:5000/search",
+  "parameters": [
+    {
+      "name": "member_id",
+      "type": "string",
+      "description": "The member ID to search for.",
+      "required": true
+    },
+    {
+      "name": "account_type",
+      "type": "string",
+      "description": "Type of sub-account to open: 'Savings', 'Checking', or 'Certificate'.",
+      "required": true
+    },
+    {
+      "name": "initial_deposit",
+      "type": "number",
+      "description": "Initial deposit amount in dollars.",
+      "required": true
+    }
+  ],
+  "steps": [
+    {
+      "step_number": 1,
+      "action": "fill_field",
+      "target": {
+        "role": "textbox",
+        "name": "Member ID:"
+      },
+      "value_param": "member_id",
+      "value_literal": null
+    },
+    {
+      "step_number": 2,
+      "action": "click_element",
+      "target": {
+        "role": "button",
+        "name": "Search"
+      },
+      "value_param": null,
+      "value_literal": null
+    },
+    {
+      "step_number": 3,
+      "action": "click_element",
+      "target": {
+        "role": "link",
+        "name": "Open Sub-Account for this Member"
+      },
+      "value_param": null,
+      "value_literal": null
+    },
+    {
+      "step_number": 4,
+      "action": "select_option",
+      "target": {
+        "role": "combobox",
+        "name": "Account Type:"
+      },
+      "value_param": "account_type",
+      "value_literal": null
+    },
+    {
+      "step_number": 5,
+      "action": "fill_field",
+      "target": {
+        "role": "textbox",
+        "name": "Initial Deposit ($):"
+      },
+      "value_param": "initial_deposit",
+      "value_literal": null
+    },
+    {
+      "step_number": 6,
+      "action": "click_element",
+      "target": {
+        "role": "button",
+        "name": "Open Sub-Account"
+      },
+      "value_param": null,
+      "value_literal": null
+    }
+  ],
+  "outputs": [
+    {
+      "name": "sub_account_id",
+      "type": "string",
+      "description": "The newly created sub-account's ID.",
+      "extract_after_label": "Sub-Account ID:"
+    }
+  ],
+  "checkpoint": {
+    "description": "The confirmation page is shown, containing the success banner text.",
+    "expected_text_contains": "Sub-Account Opened Successfully"
+  },
+  "locator_strategy_notes": "All targets use accessibility role + accessible name, sourced from the page's ARIA tree. The target app has no ids/classes/test-ids (legacy-style markup), so role+name is the only stable option; form fields were explicitly labeled during target-app development to ensure each has a real accessible name rather than relying on adjacent, unassociated text."
+}
