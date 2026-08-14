@@ -25,9 +25,14 @@ genuine hard failure, not a transient one.
 
 from dataclasses import dataclass, field
 
-from playwright.sync_api import Page, TimeoutError as PlaywrightTimeoutError, sync_playwright
+from playwright.sync_api import (
+    Page,
+    TimeoutError as PlaywrightTimeoutError,
+    sync_playwright,
+)
 
 from artifacts.schema import ArtifactStep, Capability
+from safety.policy import SafetyViolation, check_action_allowed, check_host_allowed
 
 SHORT_TIMEOUT_MS = 3000
 RETRY_TIMEOUT_MS = 10000
@@ -87,7 +92,9 @@ def _execute_step(page: Page, step: ArtifactStep, value: str | None) -> None:
             continue  # try again with the longer timeout
 
 
-def replay_capability(capability: Capability, params: dict, headless: bool = True) -> ReplayResult:
+def replay_capability(
+    capability: Capability, params: dict, headless: bool = True
+) -> ReplayResult:
     """
     Replay capability against a live browser using params, with no LLM
     involved in any decision.
@@ -105,12 +112,28 @@ def replay_capability(capability: Capability, params: dict, headless: bool = Tru
     with sync_playwright() as pw:
         browser = pw.chromium.launch(headless=headless)
         page = browser.new_page()
+
+        try:
+            check_host_allowed(capability.start_url)
+        except SafetyViolation as e:
+            browser.close()
+            return ReplayResult(status="hard_failure", failure_step=0, failure_expected="Allowed start_url host.", failure_observed=str(e))
+
         page.goto(capability.start_url)
 
         for step in capability.steps:
             try:
+                check_action_allowed(step.action)
                 value = _resolve_value(step, params)
                 _execute_step(page, step, value)
+            except SafetyViolation as e:
+                browser.close()
+                return ReplayResult(
+                    status="hard_failure",
+                    failure_step=step.step_number,
+                    failure_expected="Action to be within the safety allowlist.",
+                    failure_observed=str(e),
+                )
             except Exception as e:
                 body_text = page.locator("body").inner_text()
                 # Even on a hard failure to execute a step, check whether a
@@ -160,9 +183,13 @@ def replay_capability(capability: Capability, params: dict, headless: bool = Tru
         outputs = {}
         for output_def in capability.outputs:
             try:
-                label_locator = page.get_by_text(output_def.extract_after_label, exact=True).first
+                label_locator = page.get_by_text(
+                    output_def.extract_after_label, exact=True
+                ).first
                 value_locator = label_locator.locator("xpath=following-sibling::td[1]")
-                outputs[output_def.name] = value_locator.inner_text(timeout=SHORT_TIMEOUT_MS).strip()
+                outputs[output_def.name] = value_locator.inner_text(
+                    timeout=SHORT_TIMEOUT_MS
+                ).strip()
             except Exception as e:
                 browser.close()
                 return ReplayResult(
