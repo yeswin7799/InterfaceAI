@@ -55,6 +55,7 @@ def record_capability(
     checkpoint: Checkpoint,
     locator_strategy_notes: str,
     known_outcomes: list[KnownOutcome] | None = None,
+    risk_level: str = "safe",
 ) -> Capability:
     """
     Build a Capability from a loaded discovery log dict.
@@ -115,6 +116,7 @@ def record_capability(
         outputs=outputs,
         checkpoint=checkpoint,
         known_outcomes=known_outcomes or [],
+        risk_level=risk_level,
         locator_strategy_notes=locator_strategy_notes,
     )
 
@@ -193,6 +195,12 @@ if __name__ == "__main__":
             ),
         ],
         
+        # This capability creates a real financial record (a new sub-account)
+        # -- irreversible in the sense that undoing it is a separate,
+        # deliberate operation, not something replay can just "not do".
+        # Section 3.4 requires risky/irreversible actions be handled
+        # conservatively; we chose "require confirmation" (see replay/engine.py).
+        risk_level="risky",
         
         locator_strategy_notes=(
             "All targets use accessibility role + accessible name, sourced from the page's ARIA tree. "

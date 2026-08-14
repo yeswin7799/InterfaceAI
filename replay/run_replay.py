@@ -55,16 +55,21 @@ def main():
         help="A parameter as name=value. Repeat for multiple parameters.",
     )
     parser.add_argument("--headless", action="store_true", help="Run without a visible browser window.")
+    parser.add_argument(
+        "--confirm",
+        action="store_true",
+        help="Required to execute a 'risky' capability (one that writes/creates real records).",
+    )
     args = parser.parse_args()
 
     capability = load_capability(args.artifact_path)
     raw_params = dict(args.params)
     params = coerce_params(capability, raw_params)
 
-    print(f"Replaying '{capability.name}' v{capability.version}")
+    print(f"Replaying '{capability.name}' v{capability.version} (risk_level={capability.risk_level})")
     print(f"Parameters: {params}\n")
 
-    result = replay_capability(capability, params, headless=args.headless)
+    result = replay_capability(capability, params, headless=args.headless, confirmed=args.confirm)
 
     print(f"=== Replay finished: {result.status} ===")
     if result.status == "success":

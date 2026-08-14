@@ -119,5 +119,6 @@
       "detected_by_text": "is not a valid dollar amount."
     }
   ],
+  "risk_level": "risky",
   "locator_strategy_notes": "All targets use accessibility role + accessible name, sourced from the page's ARIA tree. The target app has no ids/classes/test-ids (legacy-style markup), so role+name is the only stable option; form fields were explicitly labeled during target-app development to ensure each has a real accessible name rather than relying on adjacent, unassociated text."
 }

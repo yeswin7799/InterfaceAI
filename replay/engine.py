@@ -92,13 +92,28 @@ def _execute_step(page: Page, step: ArtifactStep, value: str | None) -> None:
             continue  # try again with the longer timeout
 
 
-def replay_capability(
-    capability: Capability, params: dict, headless: bool = True
-) -> ReplayResult:
+def replay_capability(capability: Capability, params: dict, headless: bool = True, confirmed: bool = False) -> ReplayResult:
     """
     Replay capability against a live browser using params, with no LLM
     involved in any decision.
+
+    Risky capabilities (risk_level == "risky") refuse to execute unless
+    confirmed=True is explicitly passed -- this is the "require
+    confirmation" handling for risky/irreversible actions (Section 3.4).
+    The check happens before the browser even launches, same posture as
+    the missing-parameter check below: fail fast, don't do partial work
+    you then have to explain.
     """
+    if capability.risk_level == "risky" and not confirmed:
+        return ReplayResult(
+            status="hard_failure",
+            failure_step=0,
+            failure_expected="Explicit confirmation (confirmed=True) for a 'risky' capability.",
+            failure_observed=(
+                f"Capability '{capability.name}' is marked risky (it creates/modifies real records) "
+                "and was invoked without confirmation. Refusing to execute."
+            ),
+        )
     # Fail fast on missing required parameters, before touching the browser.
     for p in capability.parameters:
         if p.required and p.name not in params:

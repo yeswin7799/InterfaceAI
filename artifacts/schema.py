@@ -148,6 +148,14 @@ class Capability(BaseModel):
         default_factory=list,
         description="Named business outcomes replay should recognize and report distinctly from hard failures.",
     )
+    risk_level: Literal["safe", "risky"] = Field(
+        default="safe",
+        description=(
+            "'safe' for read-only/reversible capabilities. 'risky' for anything that writes or creates "
+            "real records (e.g. opening an account) -- replay refuses to execute a 'risky' capability "
+            "unless explicitly confirmed by the caller."
+        ),
+    )
 
     locator_strategy_notes: str = Field(
         description="Reasoning about why the chosen locator strategy (role+name) is expected to be robust for this app."
