@@ -40,13 +40,28 @@ class DiscoveryResult:
     steps: list = field(default_factory=list)
     outputs: dict = field(default_factory=dict)
     reasoning: str = ""
+    screenshot_path: str = ""
 
 
-def run_discovery(goal: str, start_url: str, max_steps: int = 15, headless: bool = True) -> DiscoveryResult:
+def run_discovery(
+    goal: str,
+    start_url: str,
+    max_steps: int = 15,
+    headless: bool = True,
+    evidence_dir: str | None = None,
+) -> DiscoveryResult:
     """
     Run the full discovery loop against a live browser, starting at start_url,
     trying to accomplish goal within max_steps turns.
+
+    If evidence_dir is given, a screenshot of the final page state is saved
+    there when the loop reaches a terminal condition (goal_complete, stuck,
+    or max_steps_exceeded) -- this is the "richer signal" evidence required
+    alongside the structured step log (Section 3.5).
     """
+    import os
+    import time
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=headless)
         page = browser.new_page()
@@ -54,6 +69,15 @@ def run_discovery(goal: str, start_url: str, max_steps: int = 15, headless: bool
 
         history: list[str] = []
         steps: list[Step] = []
+
+        def save_screenshot(status: str) -> str:
+            if not evidence_dir:
+                return ""
+            os.makedirs(evidence_dir, exist_ok=True)
+            timestamp = time.strftime("%Y%m%d-%H%M%S")
+            path = os.path.join(evidence_dir, f"discovery-{status}-{timestamp}.png")
+            page.screenshot(path=path)
+            return path
 
         for step_number in range(1, max_steps + 1):
             snapshot = snapshot_page(page)
@@ -63,17 +87,22 @@ def run_discovery(goal: str, start_url: str, max_steps: int = 15, headless: bool
             steps.append(Step(step_number, snapshot, decision, result.status, result.detail))
 
             if result.status == "goal_complete":
+                screenshot_path = save_screenshot("success")
                 browser.close()
                 return DiscoveryResult(
                     status="goal_complete",
                     steps=steps,
                     outputs=decision["input"].get("outputs", {}),
                     reasoning=decision["input"].get("reasoning", ""),
+                    screenshot_path=screenshot_path,
                 )
 
             if result.status == "stuck":
+                screenshot_path = save_screenshot("stuck")
                 browser.close()
-                return DiscoveryResult(status="stuck", steps=steps, reasoning=result.detail)
+                return DiscoveryResult(
+                    status="stuck", steps=steps, reasoning=result.detail, screenshot_path=screenshot_path
+                )
 
             # "ok" or "error" -- either way, record what happened and let the
             # model see it next turn. A tool error is not a crash: we feed it
@@ -82,28 +111,41 @@ def run_discovery(goal: str, start_url: str, max_steps: int = 15, headless: bool
             action_desc = f"{decision['tool']}({decision['input']})"
             history.append(f"Step {step_number}: {action_desc} -> {result.status}: {result.detail}")
 
+        screenshot_path = save_screenshot("max-steps-exceeded")
         browser.close()
         return DiscoveryResult(
             status="max_steps_exceeded",
             steps=steps,
             reasoning=f"Exceeded {max_steps} steps without reaching goal_complete or stuck.",
+            screenshot_path=screenshot_path,
         )
 
-
 if __name__ == "__main__":
-    # First real end-to-end discovery run: a simple read-only goal that
-    # doesn't require the sub-account form, to validate the loop mechanics
-    # before we try the full multi-step flow.
+    # Harder test: the real multi-step flow with a form and a confirmation
+    # checkpoint -- this is the goal we intend to turn into a saved artifact.
+    from agent.evidence import save_discovery_log
+
+    goal = (
+        "Open a new checking sub-account for member 10001 with an "
+        "initial deposit of $150, and reach the confirmation screen."
+    )
+    start_url = "http://127.0.0.1:5000/search"
+
     result = run_discovery(
-        goal="Look up member 10001 and read their savings balance.",
-        start_url="http://127.0.0.1:5000/search",
+        goal=goal,
+        start_url=start_url,
         max_steps=10,
         headless=False,
+        evidence_dir="evidence",
     )
 
     print(f"\n=== Discovery finished: {result.status} ===")
     print(f"Outputs: {result.outputs}")
     print(f"Reasoning: {result.reasoning}")
+    print(f"Screenshot: {result.screenshot_path}")
     print(f"\nSteps taken ({len(result.steps)}):")
     for s in result.steps:
         print(f"  {s.step_number}. {s.decision['tool']}({s.decision['input']}) -> {s.result_status}: {s.result_detail}")
+
+    log_path = save_discovery_log(result, goal, start_url, "evidence")
+    print(f"\nEvidence log saved to: {log_path}")
