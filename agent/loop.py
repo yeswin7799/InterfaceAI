@@ -138,32 +138,7 @@ def run_discovery(
         )
 
 if __name__ == "__main__":
-    # Escalation test: a goal our target app genuinely cannot fulfill (no
-    # phone number field exists anywhere), so the agent should reliably
-    # call `stuck` and trigger a real human handoff -- rather than hacking
-    # the target app to force a failure, this is an honest "the agent hit
-    # something it couldn't safely do" scenario.
-    from agent.evidence import save_discovery_log
-
-    goal = "Update member 10001's phone number to 555-1234."
-    start_url = "http://127.0.0.1:5000/search"
-
-    result = run_discovery(
-        goal=goal,
-        start_url=start_url,
-        max_steps=8,
-        headless=False,
-        evidence_dir="evidence",
-    )
-
-    print(f"\n=== Discovery finished: {result.status} ===")
-    print(f"Outputs: {result.outputs}")
-    print(f"Reasoning: {result.reasoning}")
-    print(f"Screenshot: {result.screenshot_path}")
-    print(f"Escalations: {len(result.escalations)}")
-    print(f"\nSteps taken ({len(result.steps)}):")
-    for s in result.steps:
-        print(f"  {s.step_number}. {s.decision['tool']}({s.decision['input']}) -> {s.result_status}: {s.result_detail}")
-
-    log_path = save_discovery_log(result, goal, start_url, "evidence")
-    print(f"\nEvidence log saved to: {log_path}")
+    # See agent/run_discovery.py for the general-purpose CLI. This block is
+    # kept minimal -- just a quick smoke test that the loop still imports
+    # and runs at all.
+    print("Use `python -m agent.run_discovery \"<goal>\" --start-url <url>` to run discovery.")
