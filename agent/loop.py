@@ -23,7 +23,7 @@ from playwright.sync_api import sync_playwright
 from agent.perception import snapshot_page
 from agent.decide import decide_next_action
 from agent.act import execute_action
-
+from agent.escalation import request_intervention
 
 @dataclass
 class Step:
@@ -36,11 +36,12 @@ class Step:
 
 @dataclass
 class DiscoveryResult:
-    status: str  # "goal_complete" | "stuck" | "max_steps_exceeded"
+    status: str  # "goal_complete" | "max_steps_exceeded"
     steps: list = field(default_factory=list)
     outputs: dict = field(default_factory=dict)
     reasoning: str = ""
     screenshot_path: str = ""
+    escalations: list = field(default_factory=list)
 
 
 def run_discovery(
@@ -69,6 +70,7 @@ def run_discovery(
 
         history: list[str] = []
         steps: list[Step] = []
+        escalations: list[dict] = []
 
         def save_screenshot(status: str) -> str:
             if not evidence_dir:
@@ -95,14 +97,28 @@ def run_discovery(
                     outputs=decision["input"].get("outputs", {}),
                     reasoning=decision["input"].get("reasoning", ""),
                     screenshot_path=screenshot_path,
+                    escalations=escalations,
                 )
 
             if result.status == "stuck":
-                screenshot_path = save_screenshot("stuck")
-                browser.close()
-                return DiscoveryResult(
-                    status="stuck", steps=steps, reasoning=result.detail, screenshot_path=screenshot_path
+                # Escalate rather than end the run: pause, hand the live
+                # session to a human, then resume the loop once they signal
+                # they're done. This is Section 3.6 -- the agent doesn't just
+                # give up when it can't safely proceed on its own.
+                escalation_record = request_intervention(
+                    page=page,
+                    goal=goal,
+                    step_number=step_number,
+                    reason=result.detail,
+                    evidence_dir=evidence_dir,
                 )
+                escalations.append(escalation_record)
+                history.append(
+                    f"Step {step_number}: Agent reported being stuck ({result.detail}). "
+                    "A human operator was given control of the browser and has now returned "
+                    "it to you. Re-examine the current page snapshot and continue toward the goal."
+                )
+                continue
 
             # "ok" or "error" -- either way, record what happened and let the
             # model see it next turn. A tool error is not a crash: we feed it
@@ -116,25 +132,26 @@ def run_discovery(
         return DiscoveryResult(
             status="max_steps_exceeded",
             steps=steps,
-            reasoning=f"Exceeded {max_steps} steps without reaching goal_complete or stuck.",
+            reasoning=f"Exceeded {max_steps} steps without reaching goal_complete.",
             screenshot_path=screenshot_path,
+            escalations=escalations,
         )
 
 if __name__ == "__main__":
-    # Harder test: the real multi-step flow with a form and a confirmation
-    # checkpoint -- this is the goal we intend to turn into a saved artifact.
+    # Escalation test: a goal our target app genuinely cannot fulfill (no
+    # phone number field exists anywhere), so the agent should reliably
+    # call `stuck` and trigger a real human handoff -- rather than hacking
+    # the target app to force a failure, this is an honest "the agent hit
+    # something it couldn't safely do" scenario.
     from agent.evidence import save_discovery_log
 
-    goal = (
-        "Open a new checking sub-account for member 10001 with an "
-        "initial deposit of $150, and reach the confirmation screen."
-    )
+    goal = "Update member 10001's phone number to 555-1234."
     start_url = "http://127.0.0.1:5000/search"
 
     result = run_discovery(
         goal=goal,
         start_url=start_url,
-        max_steps=10,
+        max_steps=8,
         headless=False,
         evidence_dir="evidence",
     )
@@ -143,6 +160,7 @@ if __name__ == "__main__":
     print(f"Outputs: {result.outputs}")
     print(f"Reasoning: {result.reasoning}")
     print(f"Screenshot: {result.screenshot_path}")
+    print(f"Escalations: {len(result.escalations)}")
     print(f"\nSteps taken ({len(result.steps)}):")
     for s in result.steps:
         print(f"  {s.step_number}. {s.decision['tool']}({s.decision['input']}) -> {s.result_status}: {s.result_detail}")
