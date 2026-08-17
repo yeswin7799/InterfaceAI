@@ -4,17 +4,20 @@
 
 Two independent paths share one artifact:
 
-```
-DISCOVERY (uses the LLM)                REPLAY (no LLM)
-  goal + start_url                        artifact + params
-  observe (ARIA snapshot)                 execute step (role+name,
-  decide (Claude tool call)                 timeout+retry)
-  act (Playwright, role+name)             check known_outcomes/checkpoint
-  loop -> goal_complete /                 extract outputs
-    stuck (-> escalation) /               -> ReplayResult (success /
-    max_steps                                business_outcome / hard_failure)
-  -> DiscoveryResult -> artifacts.record.record_capability() -> Capability (JSON)
-```
+**Discovery** (uses the LLM):
+1. Goal + start URL in
+2. **Observe** -- capture an ARIA snapshot of the current page
+3. **Decide** -- Claude picks one tool call (`fill_field`, `click_element`, `select_option`, `goal_complete`, or `stuck`)
+4. **Act** -- Playwright executes it via a `(role, name)` locator
+5. Repeat 2-4 until `goal_complete`, `stuck` (→ escalation, then resume), or `max_steps`
+6. Produces a `DiscoveryResult` → `artifacts.record.record_capability()` → a saved `Capability` (JSON)
+
+**Replay** (no LLM, reads the artifact from step 6):
+1. Artifact + parameter values in
+2. For each recorded step: resolve the value, execute it via the same `(role, name)` locator, with a timeout+retry for transient slowness
+3. After every step, check the page against the artifact's `known_outcomes`
+4. If all steps finish: check the checkpoint text, extract declared outputs
+5. Returns a `ReplayResult`: `success`, `business_outcome`, or `hard_failure`
 
 **Perception is role+accessible-name, not screenshots.** Every observation
 is Playwright's ARIA snapshot; every action targets `(role, name)` via
