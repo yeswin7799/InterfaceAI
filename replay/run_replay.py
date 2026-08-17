@@ -13,9 +13,34 @@ Usage:
 """
 
 import argparse
+import json
+import os
+import time
+from dataclasses import asdict
 
 from artifacts.schema import Capability
 from replay.engine import replay_capability
+
+
+def save_replay_log(result, capability_name: str, params: dict, output_dir: str = "evidence") -> str:
+    """
+    Save a ReplayResult to evidence/, mirroring agent.evidence.save_discovery_log
+    -- this is the "logs from ... a replay run" half of the evidence deliverable.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    path = os.path.join(output_dir, f"replay-log-{capability_name}-{timestamp}.json")
+
+    record = {
+        "capability_name": capability_name,
+        "params": params,
+        **asdict(result),
+    }
+
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(record, f, indent=2)
+
+    return path
 
 
 def load_capability(path: str) -> Capability:
@@ -81,6 +106,8 @@ def main():
         print(f"Failed at step: {result.failure_step}")
         print(f"Expected: {result.failure_expected}")
         print(f"Observed: {result.failure_observed}")
+    log_path = save_replay_log(result, capability.name, params)
+    print(f"\nEvidence log saved to: {log_path}")
 
 
 if __name__ == "__main__":

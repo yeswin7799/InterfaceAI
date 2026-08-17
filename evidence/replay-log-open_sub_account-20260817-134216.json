@@ -1,0 +1,17 @@
+{
+  "capability_name": "open_sub_account",
+  "params": {
+    "member_id": "10002",
+    "account_type": "Savings",
+    "initial_deposit": 300.0
+  },
+  "status": "success",
+  "outputs": {
+    "sub_account_id": "SA-6EE68343"
+  },
+  "outcome_name": "",
+  "outcome_description": "",
+  "failure_step": null,
+  "failure_expected": "",
+  "failure_observed": ""
+}

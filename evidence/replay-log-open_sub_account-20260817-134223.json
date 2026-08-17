@@ -1,0 +1,15 @@
+{
+  "capability_name": "open_sub_account",
+  "params": {
+    "member_id": "99999",
+    "account_type": "Savings",
+    "initial_deposit": 100.0
+  },
+  "status": "business_outcome",
+  "outputs": {},
+  "outcome_name": "member_not_found",
+  "outcome_description": "No member exists with the given member_id.",
+  "failure_step": null,
+  "failure_expected": "",
+  "failure_observed": ""
+}
